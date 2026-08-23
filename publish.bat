@@ -25,6 +25,12 @@ shift
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
+rem Отключаем интерактивные pager'ы Git/GitHub, чтобы BAT не "зависал" на экране less.
+set "GIT_PAGER=cat"
+set "GH_PAGER=cat"
+set "PAGER=cat"
+set "LESS=FRX"
+
 set "MODE=interactive"
 if /I "%~1"=="--check" set "MODE=check"
 if /I "%~1"=="--dry-run" set "MODE=dry-run"
@@ -237,7 +243,7 @@ set "FAIL=1"
 
 :pf_conflict_files
 set "CONFLICT_FILE="
-for /f "delims=" %%C in ('git diff --name-only --diff-filter^=U 2^>nul') do set "CONFLICT_FILE=%%C"
+for /f "delims=" %%C in ('git --no-pager diff --name-only --diff-filter^=U 2^>nul') do set "CONFLICT_FILE=%%C"
 if not defined CONFLICT_FILE goto :pf_origin
 echo [БЛОКИРОВКА] Неразрешённый конфликт: !CONFLICT_FILE!
 set "FAIL=1"
@@ -301,7 +307,7 @@ if errorlevel 1 set "FAIL=1"
 if not "!IS_REPO!"=="1" goto :pf_result
 echo.
 echo --- Точный список изменений ---
-git status --short
+git --no-pager status --short
 echo --- Конец списка ---
 
 :pf_result
@@ -567,7 +573,7 @@ echo.
 echo ============================================================
 echo ПРОВЕРКА ИЗМЕНЕНИЙ
 echo ============================================================
-git status --short
+git --no-pager status --short
 echo ============================================================
 
 call :working_sensitive_gate
@@ -600,7 +606,7 @@ echo.
 echo ============================================================
 echo СПИСОК STAGED-ФАЙЛОВ
 echo ============================================================
-git diff --cached --name-status
+git --no-pager diff --cached --name-status
 echo ============================================================
 set "ANSWER="
 set /p "ANSWER=Введи YES, чтобы создать commit: "
@@ -738,7 +744,7 @@ exit /b 0
 
 :staged_sensitive_gate
 set "BAD_STAGED="
-for /f "delims=" %%S in ('git diff --cached --name-only -- ".env" "*.pem" "*.key" "*.p12" "*.pfx" ".venv" ".runtime" ".portable" 2^>nul') do set "BAD_STAGED=%%S"
+for /f "delims=" %%S in ('git --no-pager diff --cached --name-only -- ".env" "*.pem" "*.key" "*.p12" "*.pfx" ".venv" ".runtime" ".portable" 2^>nul') do set "BAD_STAGED=%%S"
 if not defined BAD_STAGED exit /b 0
 echo [БЛОКИРОВКА] В staging найден чувствительный файл:
 echo   !BAD_STAGED!

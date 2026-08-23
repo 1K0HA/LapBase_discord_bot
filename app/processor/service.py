@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.config import Config
 from app.models import ProcessedPost, SourceMessage
-from app.processor.renderer import build_markdown, text_budget
+from app.processor.renderer import build_message_html, text_budget
 from app.processor.sanitizer import protect_nontranslatable, sanitize
 from app.processor.translator import Translator
 
@@ -27,4 +27,4 @@ class PostProcessor:
         )
 
     async def render(self, source: SourceMessage) -> str:
-        return build_markdown(await self.process(source), self.config)
+        return build_message_html(await self.process(source), self.config)

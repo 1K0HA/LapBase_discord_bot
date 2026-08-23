@@ -2,7 +2,11 @@ from pathlib import Path
 
 from app.config import Config
 from app.models import ProcessedPost
-from app.processor.renderer import build_markdown
+from app.processor.renderer import (
+    TELEGRAM_MESSAGE_MAX_CHARS,
+    build_message_html,
+    text_budget,
+)
 
 
 def config() -> Config:
@@ -35,31 +39,45 @@ def config() -> Config:
     )
 
 
-def test_channel_name_and_collage():
-    result = build_markdown(
-        ProcessedPost("**Привет**", "updates", ["https://x/a.jpg", "https://x/b.jpg"]),
-        config(),
-    )
-    assert "Источник" in result
-    assert "#updates" in result
-    assert "<tg-collage>" in result
-    assert "a.jpg" in result and "b.jpg" in result
-
-
-
-def test_source_is_heading_and_autopost_tag_is_last():
-    result = build_markdown(
+def test_send_message_layout_and_line_breaks():
+    result = build_message_html(
         ProcessedPost("Строка 1\n\nСтрока 2", "🎉event-news", []),
         config(),
     )
-    assert result.startswith("# **Источник официальный DISCORD: #🎉event-news**\n\n")
+    assert result.startswith("<b>Источник официальный DISCORD: #🎉event-news</b>\n\n")
     assert "Строка 1\n\nСтрока 2" in result
     assert result.endswith("#autopost@lapbase")
 
 
-def test_autopost_tag_after_media():
-    result = build_markdown(
-        ProcessedPost("Текст", "updates", ["https://x/a.jpg"]),
+def test_discord_markdown_is_converted_to_telegram_html():
+    result = build_message_html(
+        ProcessedPost("**Жирный**\n`код`\n||спойлер||", "updates", []),
         config(),
     )
-    assert result.rfind("#autopost@lapbase") > result.rfind("a.jpg")
+    assert "<b>Жирный</b>" in result
+    assert "<code>код</code>" in result
+    assert "<tg-spoiler>спойлер</tg-spoiler>" in result
+
+
+def test_html_characters_are_escaped():
+    result = build_message_html(
+        ProcessedPost("5 < 10 & 10 > 5", "updates", []),
+        config(),
+    )
+    assert "5 &lt; 10 &amp; 10 &gt; 5" in result
+
+
+def test_images_are_kept_as_urls_with_send_message():
+    result = build_message_html(
+        ProcessedPost("Текст", "updates", ["https://x/a.jpg", "https://x/b.jpg"]),
+        config(),
+    )
+    assert "https://x/a.jpg" in result
+    assert "https://x/b.jpg" in result
+    assert "<tg-collage>" not in result
+    assert result.endswith("#autopost@lapbase")
+
+
+def test_send_message_budget_uses_4096_limit():
+    budget = text_budget("updates", [], config())
+    assert 500 <= budget < TELEGRAM_MESSAGE_MAX_CHARS

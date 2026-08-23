@@ -174,3 +174,32 @@ Every automatic publication ends with:
 - после успешной публикации сохраняет receipt в `.portable/state/publish/`.
 
 Для работы `publish.bat` должны быть заранее установлены и настроены Git и GitHub CLI.
+
+## Telegram send_message mode
+
+Автопубликации используют обычный Telegram Bot API `sendMessage` (`aiogram Bot.send_message`)
+с `parse_mode=HTML`, а не Rich Messages.
+
+Формат:
+- жирная строка `Источник официальный DISCORD: #channel`;
+- переведённый текст с исходными переносами строк;
+- Discord Markdown конвертируется в безопасный Telegram HTML;
+- `#autopost@lapbase` в конце.
+
+Ограничение `sendMessage`: 4096 символов. Поэтому длинные посты при необходимости
+сжимаются переводчиком до доступного бюджета.
+
+Важно: `sendMessage` не умеет прикреплять изображения как media. Чтобы не терять
+Discord-вложения и при этом сохранять схему "один Discord-пост → одно Telegram-сообщение",
+LapBase добавляет URL изображений в текст сообщения.
+
+### send_message regression fix (v1.0.21)
+
+Исправлена миграция с Rich Messages на `send_message`:
+
+- Groq всегда возвращает массив переведённых сегментов, даже если сегмент один;
+- строка вида `["перевод"]` автоматически распаковывается в `перевод`;
+- `compress()` использует отдельную корректную JSON Schema;
+- publisher блокирует смешанную установку старого Markdown renderer + нового `send_message`;
+- источник формируется только как Telegram HTML: `<b>Источник официальный DISCORD: #channel</b>`;
+- `#autopost@lapbase` отправляется без Markdown-экранирования.

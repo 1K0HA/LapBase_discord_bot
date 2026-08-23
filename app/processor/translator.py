@@ -11,19 +11,8 @@ from app.processor.sanitizer import ProtectedText
 
 logger = logging.getLogger(__name__)
 
-def _translation_schema(segment_count: int = 1) -> dict:
-    if segment_count <= 1:
-        return {
-            "name": "lapbase_translation",
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": {"translated": {"type": "string"}},
-                "required": ["translated"],
-                "additionalProperties": False,
-            },
-        }
-
+def _translation_schema(segment_count: int) -> dict:
+    """Groq structured output: always return an array with the exact segment count."""
     return {
         "name": "lapbase_translation_segments",
         "strict": True,
@@ -41,6 +30,33 @@ def _translation_schema(segment_count: int = 1) -> dict:
             "additionalProperties": False,
         },
     }
+
+
+COMPRESSION_SCHEMA = {
+    "name": "lapbase_compression",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {"translated": {"type": "string"}},
+        "required": ["translated"],
+        "additionalProperties": False,
+    },
+}
+
+
+def _unwrap_accidental_json_array(value: str) -> str:
+    """Defensive recovery for model output like '["текст"]' inside one string."""
+    stripped = value.strip()
+    if not (stripped.startswith("[") and stripped.endswith("]")):
+        return value
+    try:
+        parsed = json.loads(stripped)
+    except Exception:
+        return value
+    if isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], str):
+        return parsed[0]
+    return value
+
 
 
 def _split_on_linebreak_tokens(protected: ProtectedText) -> tuple[list[str], list[str]]:
@@ -101,7 +117,7 @@ class Translator:
                     "content": (
                         "Translate each supplied Discord news text segment from English to natural Russian. "
                         "Correct Russian grammar and style, but never add, remove, reinterpret, or invent facts. "
-                        "The input is an ordered JSON array. Return exactly the same number of translated strings "
+                        "The input JSON object contains an ordered array in the field segments. Return exactly the same number of translated strings "
                         "in exactly the same order. Never merge or split array items. "
                         "Preserve Markdown, headings, lists, quotes, bold and spoilers inside each item. "
                         "Every token matching LBPROTECTED####TOKEN is immutable: copy it exactly and never "
@@ -110,7 +126,7 @@ class Translator:
                 },
                 {
                     "role": "user",
-                    "content": json.dumps(payload_segments, ensure_ascii=False),
+                    "content": json.dumps({"segments": payload_segments}, ensure_ascii=False),
                 },
             ],
             response_format={
@@ -124,14 +140,12 @@ class Translator:
         data = json.loads(raw)
         translated_payload = data["translated"]
 
-        if len(payload_segments) == 1 and isinstance(translated_payload, str):
-            translated_payload = [translated_payload]
-
         if not isinstance(translated_payload, list) or len(translated_payload) != len(payload_segments):
             raise ValueError("Translation returned an invalid segment count")
 
         translated_segments = list(segments)
         for index, translated_segment in zip(nonempty_indexes, translated_payload, strict=True):
+            translated_segment = _unwrap_accidental_json_array(translated_segment)
             translated_segments[index] = translated_segment.strip()
 
         rebuilt: list[str] = []
@@ -160,7 +174,7 @@ class Translator:
                 },
                 {"role": "user", "content": markdown},
             ],
-            response_format={"type": "json_schema", "json_schema": TRANSLATION_SCHEMA},
+            response_format={"type": "json_schema", "json_schema": COMPRESSION_SCHEMA},
             temperature=0,
         )
         raw = response.choices[0].message.content or "{}"
