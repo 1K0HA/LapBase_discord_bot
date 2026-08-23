@@ -1,0 +1,16 @@
+[Unit]
+Description=LapBase Discord-to-Telegram publisher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lapbase
+WorkingDirectory=/opt/lapbase
+ExecStart=/opt/lapbase/start.sh
+Restart=on-failure
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
