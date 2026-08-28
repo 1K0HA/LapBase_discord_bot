@@ -1,0 +1,48 @@
+[project]
+name = "lapbase"
+version = "1.0.28"
+description = "Бот для чтения новостей Discord, перевода через Groq и публикации в Telegram"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "aiogram==3.30.0",
+    "discord.py==2.7.1",
+    "groq==1.6.0",
+    "asyncpg==0.31.0",
+    "python-dotenv==1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "ruff==0.16.1",
+    "mypy==2.3.0",
+]
+
+[tool.uv]
+package = false
+python-downloads = "manual"
+exclude-newer = "2026-08-24T00:00:00Z"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+exclude = [".runtime", ".venv", ".1kds/state"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.14"
+files = ["app"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true

@@ -1,0 +1,77 @@
+name: 1KDS CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Подготовить Portable L2 окружение
+        if: runner.os == 'Linux'
+        run: bash ./start.sh --prepare-only --dev
+
+      - name: Подготовить Portable L2 окружение
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: start.bat --prepare-only --dev
+
+      - name: Pytest
+        if: runner.os == 'Linux'
+        run: .venv/bin/python -m pytest -q
+
+      - name: Pytest
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: .venv\Scripts\python.exe -m pytest -q
+
+      - name: Ruff
+        if: runner.os == 'Linux'
+        run: .venv/bin/python -m ruff check app tests
+
+      - name: Ruff
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: .venv\Scripts\python.exe -m ruff check app tests
+
+      - name: Mypy
+        if: runner.os == 'Linux'
+        run: .venv/bin/python -m mypy app
+
+      - name: Mypy
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: .venv\Scripts\python.exe -m mypy app
+
+      - name: Аудит production-зависимостей
+        if: runner.os == 'Linux'
+        run: .runtime/uv/uv audit --frozen --no-dev
+
+      - name: Аудит production-зависимостей
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: .runtime\uv\uv.exe audit --frozen --no-dev
+
+      - name: Compileall
+        if: runner.os == 'Linux'
+        run: .venv/bin/python -m compileall -q app
+
+      - name: Compileall
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: .venv\Scripts\python.exe -m compileall -q app
+
+      - name: Shell syntax
+        if: runner.os == 'Linux'
+        run: bash -n start.sh

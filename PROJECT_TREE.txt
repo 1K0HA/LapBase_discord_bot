@@ -1,0 +1,27 @@
+LapBase/
+├── .1kds/
+│   ├── README.md
+│   └── runtime.env
+├── .github/workflows/ci.yml
+├── app/
+│   └── instance_lock.py  # защита от второго экземпляра
+├── backups/.gitkeep
+├── deploy/lapbase.service
+├── logs/.gitkeep
+├── migrations/
+├── scripts/
+├── tests/
+├── .env.example
+├── .gitattributes
+├── .gitignore
+├── .python-version
+├── 1KDS_REPORT.md
+├── PROJECT_TREE.txt
+├── README.md
+├── publish.bat
+├── pyproject.toml
+├── start.bat
+└── start.sh
+
+Генерируется при первом Portable prepare и должен быть добавлен в Git:
+└── uv.lock
